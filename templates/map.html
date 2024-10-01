@@ -7,34 +7,47 @@
     <title>Real-Time User Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        #map {
-            height: 100vh;
-        }
+#map {
+    height: 100vh;
+}
 
-        /* Pulsating circle animation */
-        .pulse-circle {
-            background-color: rgba(255, 0, 0, 0.4);
-            border-radius: 50%;
-            animation: pulsate 1.5s ease-out infinite;
-        }
+.pulse-circle {
+    width: 10px; /* Default size */
+    height: 10px; /* Default size */
+    background-color: rgba(255, 0, 0, 0.4);
+    border-radius: 50%;
+    animation: pulsate 1.5s ease-out infinite;
+    opacity: 1;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the circle in the div */
+}
 
-        @keyframes pulsate {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
+.transparent-div {
+    background: none !important;
+    border: none !important;
+}
 
-            50% {
-                transform: scale(2);
-                opacity: 0.5;
-            }
+@keyframes pulsate {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.7;
+    }
 
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-    </style>
+    50% {
+        transform: translate(-50%, -50%) scale(2.5); /* Pulsing effect */
+        opacity: 0.3;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.7;
+    }
+}
+
+
+  </style>
 </head>
 
 <body>
@@ -71,50 +84,54 @@
             return Object.values(countryData);
         }
 
-        // Function to fetch real-time data
-        function fetchRealtimeData() {
-            fetch('/realtime')
-                .then(response => response.json())
-                .then(data => {
-                    // Clear existing markers
-                    map.eachLayer(function (layer) {
-                        if (layer instanceof L.Circle || layer instanceof L.Marker) {
-                            map.removeLayer(layer);
-                        }
-                    });
+    // Function to fetch real-time data
+    function fetchRealtimeData() {
+        fetch('/realtime')
+            .then(response => response.json())
+            .then(data => {
+                // Clear existing markers
+                map.eachLayer(function (layer) {
+                    if (layer instanceof L.Circle || layer instanceof L.Marker) {
+                        map.removeLayer(layer);
+                    }
+                });
 
-                    // Aggregate data by country
-                    const aggregatedData = aggregateByCountry(data);
+                // Aggregate data by country
+                const aggregatedData = aggregateByCountry(data);
 
-                    // Add new markers and circles based on country
-                    aggregatedData.forEach(country => {
-                        const lat = country.latitude;
-                        const lng = country.longitude;
-                        const activeUsers = country.active_users;
+                // Add new markers and circles based on country
+                aggregatedData.forEach(country => {
+                    const lat = country.latitude;
+                    const lng = country.longitude;
+                    const activeUsers = country.active_users;
 
-                        // Add the circle with appropriate scaling
-                        const circleRadius = Math.max(20000, activeUsers * 500); // Adjust minimum and scaling for circles
+                    // Add the circle with appropriate scaling
+                    if (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)) {
+                        const circleRadius = Math.max(10000, activeUsers * 500); // Adjust circle radius as needed
                         const circle = L.circle([lat, lng], {
-                            radius: circleRadius, // Radius is based on aggregated active_users
+                            radius: circleRadius,
                             color: 'red',
                             fillOpacity: 0.5,
                         }).addTo(map);
 
-                        // Add pulsating marker with dynamic size
-                        const iconSize = Math.max(20, activeUsers * 5); // Adjust icon scaling for pulse effect
+                        const circleSize = Math.max(20, activeUsers * 10); // Adjust pulsating circle size
+
                         const icon = L.divIcon({
-                            className: 'pulse-circle',
-                            iconSize: [iconSize, iconSize],
-                            popupAnchor: [0, -iconSize / 2],
+                            html: `<div class="pulse-circle" style="width: ${circleSize}px; height: ${circleSize}px;"></div>`, // Inject dynamic size
+                            iconSize: [circleSize, circleSize],  // Set the icon size to match the circle
+                            className: 'transparent-div', // Make sure the div itself has no style
+                            popupAnchor: [0, -circleSize / 2],   // Center the popup
                         });
 
                         L.marker([lat, lng], { icon }).addTo(map);
-                    });
+                    }
                 });
-        }
+            });
+    }
 
-        // Fetch data every 5 seconds
-        setInterval(fetchRealtimeData, 5000);
+    // Fetch data every 60 seconds
+    setInterval(fetchRealtimeData, 60000);
+
     </script>
 </body>
 

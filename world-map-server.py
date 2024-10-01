@@ -2,11 +2,10 @@ from flask import Flask, jsonify, render_template
 from google.oauth2 import service_account
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.cloud import secretmanager
-from geopy.geocoders import Nominatim
 import json
 from time import sleep
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from geopy.geocoders import GoogleV3
+
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import time
 from google.api_core.exceptions import ResourceExhausted
@@ -28,7 +27,6 @@ def get_gcp_credentials():
         ]
     )
     return gcp_credentials
-
 
 
 def get_coordinates(city, country):
