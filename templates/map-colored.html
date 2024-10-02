@@ -9,6 +9,7 @@
     <style>
         #map {
             height: 100vh;
+            top: 25%;
         }
 
         .pulse-circle {
@@ -39,7 +40,7 @@
             }
 
             50% {
-                transform: translate(-50%, -50%) scale(2.5);
+                transform: translate(-50%, -50%) scale(1.5);
                 /* Pulsing effect */
                 opacity: 0.3;
             }
@@ -58,7 +59,7 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script> <!-- Load chroma.js for gradient color scale -->
     <script>
-        const map = L.map('map').setView([0, 0], 2); // Initialize map
+        const map = L.map('map').setView([20, 15], 2.5); // Initialize map
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); // Add OpenStreetMap tile layer
 
@@ -92,29 +93,30 @@
             });
 
         // Function to aggregate data by country
-        function aggregateByCountry(data) {
-            const countryData = {};
+ function aggregateByCountry(data) {
+        const countryData = {};
 
-            data.forEach(user => {
-                if (user.country && user.latitude && user.longitude && !isNaN(parseInt(user.active_users))) {
-                    const country = user.country;
-                    const activeUsers = parseInt(user.active_users);
+        data.forEach(user => {
+            if (user.country && user.latitude && user.longitude && !isNaN(parseInt(user.active_users))) {
+                const country = user.country;
+                const activeUsers = parseInt(user.active_users);
 
-                    // Aggregate by country
-                    if (!countryData[country]) {
-                        countryData[country] = {
-                            active_users: activeUsers,
-                            latitude: user.latitude,
-                            longitude: user.longitude,
-                        };
-                    } else {
-                        countryData[country].active_users += activeUsers;
-                    }
+                // Aggregate by country
+                if (!countryData[country]) {
+                    countryData[country] = {
+                        country: country,  // Make sure to include the country name here
+                        active_users: activeUsers,
+                        latitude: user.latitude,
+                        longitude: user.longitude,
+                    };
+                } else {
+                    countryData[country].active_users += activeUsers;
                 }
-            });
+            }
+        });
 
-            return Object.values(countryData);
-        }
+        return Object.values(countryData);
+    }
 
         // Function to fetch real-time data
         function fetchRealtimeData() {
@@ -137,28 +139,38 @@
                         const lng = country.longitude;
                         const activeUsers = country.active_users;
 
-                        // Add the circle with appropriate scaling
                         if (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)) {
-                            const circleRadius = Math.max(10000, activeUsers * 500); // Adjust circle radius as needed
+                            const circleRadius = Math.max(10000, activeUsers * 500);
                             const circle = L.circle([lat, lng], {
                                 radius: circleRadius,
                                 color: 'red',
                                 fillOpacity: 0.5,
                             }).addTo(map);
 
-                            const circleSize = Math.max(20, activeUsers * 10); // Adjust pulsating circle size
+                            const circleSize = Math.max(20, activeUsers * 10);
 
                             const icon = L.divIcon({
-                                html: `<div class="pulse-circle" style="width: ${circleSize}px; height: ${circleSize}px;"></div>`, // Inject dynamic size
-                                iconSize: [circleSize, circleSize],  // Set the icon size to match the circle
-                                className: 'transparent-div', // Make sure the div itself has no style
-                                popupAnchor: [0, -circleSize / 2],   // Center the popup
+                                html: `<div class="pulse-circle" style="width: ${circleSize}px; height: ${circleSize}px;"></div>`,
+                                iconSize: [circleSize, circleSize],
+                                className: 'transparent-div',
+                                popupAnchor: [0, -circleSize / 2],
                             });
 
-                            L.marker([lat, lng], { icon }).addTo(map);
+                            const marker = L.marker([lat, lng], { icon }).addTo(map);
+
+                            // Bind popup for circle (on click)
+                            circle.bindPopup(`Country: ${country.country}<br>Active Users: ${activeUsers}`);
+
+                            // Bind tooltip for marker (on hover)
+                            marker.bindTooltip(`Country: ${country.country}<br>Active Users: ${activeUsers}`, {
+                                permanent: false,
+                                direction: 'top',
+                                offset: L.point(0, -circleSize / 2)
+                            });
                         }
-                    });
-                });
+                    });  
+
+                });  
         }
 
         // Fetch data every 60 seconds
