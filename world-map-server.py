@@ -52,7 +52,7 @@ def index():
     """
     Serve the HTML map page.
     """
-    return render_template('map.html')
+    return render_template('map-colored.html')
 
 @app.route('/realtime', methods=['GET'])
 
@@ -83,7 +83,7 @@ def get_realtime_data():
                     'latitude': lat,
                     'longitude': lon
                 })
-            print(response_data)
+
             return response_data
         except ResourceExhausted as e:
             retries -= 1
