@@ -5,11 +5,10 @@ from google.cloud import secretmanager
 import json
 from time import sleep
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import time
 from google.api_core.exceptions import ResourceExhausted
 from geopy.geocoders import OpenCage
+
 
 app = Flask(__name__)
 
@@ -50,13 +49,28 @@ def get_coordinates(city, country):
 @app.route('/')
 def index():
     """
-    Serve the HTML map page.
+    Serve the HTML globe page.
+    """
+    return render_template('split_view.html')
+
+
+@app.route('/globe')
+def split_view():
+    """
+    Serve the HTML split view page with two iframes.
     """
     return render_template('globe.html')
 
+
+@app.route('/map-colored')
+def map_colored():
+    """
+    Serve the map_colored.html page.
+    """
+    return render_template('map-colored.html')
+
+
 @app.route('/realtime', methods=['GET'])
-
-
 def get_realtime_data():
     retries = 3
     while retries > 0:
@@ -84,12 +98,12 @@ def get_realtime_data():
                     'longitude': lon
                 })
 
-            return response_data
+            return jsonify(response_data)
         except ResourceExhausted as e:
             retries -= 1
             print(f"Quota exhausted, retrying in 60 seconds... ({3 - retries} of 3 retries)")
             time.sleep(60)  # Wait for 1 minute before retrying
-    return {"error": "Quota exhausted. Please try again later."}
+    return jsonify({"error": "Quota exhausted. Please try again later."})
 
 
 if __name__ == '__main__':
