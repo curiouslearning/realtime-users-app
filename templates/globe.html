@@ -1,8 +1,25 @@
+<style>
+    /* Tooltip styling */
+    #tooltip {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 5px;
+        border-radius: 3px;
+        pointer-events: none;
+        display: none;
+        font-size: 12px;
+    }
+</style>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
+<div id="tooltip"></div> <!-- Tooltip element -->
+
 <script>
-    let scene, camera, renderer, earthMesh, controls;
+    let scene, camera, renderer, earthMesh, controls, raycaster, mouse, tooltip;
+    const interactiveObjects = [];  // Array to store the circles for interaction
 
     // Initialize the scene
     function init() {
@@ -30,6 +47,39 @@
         controls.enableZoom = true;  // Allow zooming
         controls.enablePan = false;  // Disable panning
         controls.update();  // Initial update
+
+        // Raycaster and mouse for interaction
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        // Tooltip element
+        tooltip = document.getElementById('tooltip');
+    }
+
+// Function to aggregate data by country
+    function aggregateByCountry(data) {
+        const countryData = {};
+
+        data.forEach(user => {
+            if (user.country && user.latitude && user.longitude && !isNaN(parseInt(user.active_users))) {
+                const country = user.country;
+                const activeUsers = parseInt(user.active_users);
+
+                // Aggregate by country
+                if (!countryData[country]) {
+                    countryData[country] = {
+                        country: country,  // Make sure to include the country name here
+                        active_users: activeUsers,
+                        latitude: user.latitude,
+                        longitude: user.longitude,
+                    };
+                } else {
+                    countryData[country].active_users += activeUsers;
+                }
+            }
+        });
+
+        return Object.values(countryData);
     }
 
     // Convert lat/long to 3D coordinates on the sphere
@@ -50,42 +100,51 @@
             console.log("fetching realtime data");
             const response = await fetch('/realtime');
             const data = await response.json();
+            const aggregatedData = aggregateByCountry(data);
 
             // Update the scene with the fetched active user data
-            updateSceneWithActiveUsers(data);
+            updateSceneWithActiveUsers(aggregatedData);
         } catch (error) {
             console.error('Error fetching real-time data:', error);
         }
     }
 
-    // Add glowing blobs for each active user
+    // Add glowing blobs for each active user with interactive capability
     function updateSceneWithActiveUsers(activeUsers) {
-        console.log("Active Users Data:", activeUsers);  // Check data in console
+        console.log("Active Users Data:", activeUsers);
 
         // Clear existing blobs, but keep the earth
         while (scene.children.length > 1) {
             scene.remove(scene.children[1]);
         }
 
+        // Clear interactive objects array
+        interactiveObjects.length = 0;
+
         activeUsers.forEach(user => {
-            const activeUsersCount = parseInt(user.active_users);  // Convert active_users to a number
+            const activeUsersCount = parseInt(user.active_users);
             const latitude = user.latitude;
             const longitude = user.longitude;
 
             if (!isNaN(latitude) && !isNaN(longitude) && activeUsersCount > 0) {
                 const position = latLongToVector3(latitude, longitude, 5, 0.1);  // Calculate position
 
-                const blobSize = 0.1 + Math.log(activeUsersCount + 1) * 0.2;  // Adjust blob size
+                const blobSize = 0.1 + Math.log(activeUsersCount + 1) * 0.1;  // Smaller blob size
                 const glowGeometry = new THREE.SphereGeometry(blobSize, 16, 16);
+
                 const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x61c98a,
+                    color: 0x8edaa7,  
                     transparent: true,
                     opacity: 0.7
                 });
 
                 const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-                glowMesh.position.copy(position);  // Set the position of the blob
-                scene.add(glowMesh);  // Add the blob to the scene
+                glowMesh.position.copy(position);
+                glowMesh.userData = { country: user.country, activeUsersCount: activeUsersCount };  // Add user data
+
+                // Add blob to scene and to interactive objects
+                scene.add(glowMesh);
+                interactiveObjects.push(glowMesh);
             }
         });
     }
@@ -94,12 +153,37 @@
     function animateBlobs() {
         const time = Date.now() * 0.002;  // Adjust pulsation speed
         scene.children.forEach(child => {
-            // Ensure that only the blobs are pulsating, excluding the earth mesh
             if (child instanceof THREE.Mesh && child.geometry instanceof THREE.SphereGeometry && child !== earthMesh) {
-                const scale = Math.sin(time) * 0.3 + 1; // Smooth pulsation
+                const scale = Math.sin(time) * 0.3 + 1;  // Smooth pulsation
                 child.scale.set(scale, scale, scale);
             }
         });
+    }
+
+    // Hover interaction with raycasting
+    function onMouseMove(event) {
+        // Calculate mouse position in normalized device coordinates
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Update raycaster with camera and mouse position
+        raycaster.setFromCamera(mouse, camera);
+
+        // Find intersections with interactive objects (blobs)
+        const intersects = raycaster.intersectObjects(interactiveObjects);
+
+        if (intersects.length > 0) {
+            const intersected = intersects[0].object;
+            const { country, activeUsersCount } = intersected.userData;
+
+            // Show tooltip with country and active user count
+            tooltip.style.display = 'block';
+            tooltip.style.left = `${event.clientX + 5}px`;  // Position near the mouse
+            tooltip.style.top = `${event.clientY + 5}px`;
+            tooltip.innerHTML = `Country: ${country} <br> Active Users: ${activeUsersCount}`;
+        } else {
+            tooltip.style.display = 'none';  // Hide tooltip when not hovering over any blob
+        }
     }
 
     // Animate the scene
@@ -112,13 +196,48 @@
 
     // Ensure the DOM is fully loaded before initializing Three.js
     document.addEventListener('DOMContentLoaded', (event) => {
+        // Initialize the scene
         init();
+
+        // Animate the scene
         animate();
+
+        // Set up the camera with a larger field of view, aspect ratio, and near/far clipping planes
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);  // Increase FOV to 90
+        camera.position.z = 15;  // Set the distance of the camera from the globe
+
+        // Set initial view to center Africa (0° latitude, 20° longitude)
+        const targetLongitude = -20;  // Longitude for center of Africa
+        const targetLatitude = 20;    // Latitude for center of Africa
+
+        const radius = 15;  // Distance from the globe
+
+        // Convert the target latitude and longitude to Cartesian coordinates
+        const phi = THREE.Math.degToRad(90 - targetLatitude);  // Convert latitude
+        const theta = THREE.Math.degToRad(targetLongitude);    // Convert longitude
+
+        camera.position.x = radius * Math.sin(phi) * Math.cos(theta);
+        camera.position.y = radius * Math.cos(phi);
+        camera.position.z = radius * Math.sin(phi) * Math.sin(theta);
+
+        // Ensure the camera is pointing at the center of the globe
+        camera.lookAt(earthMesh.position);
+
+        // Reinitialize OrbitControls after setting the camera
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableZoom = true;  // Allow zooming
+        controls.enablePan = false;  // Disable panning
+        controls.update();  // Initial update of the controls
 
         // Fetch data immediately on load
         fetchRealTimeData();  // Call the function to fetch data right away
     });
 
+
     // Fetch and update real-time data periodically
     setInterval(fetchRealTimeData, 60000);  // Fetch data every 60 seconds
+
+    // Add mouse move event listener for hover
+    window.addEventListener('mousemove', onMouseMove, false);
+
 </script>
