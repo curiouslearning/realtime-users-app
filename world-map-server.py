@@ -52,7 +52,7 @@ def index():
     """
     Serve the HTML map page.
     """
-    return render_template('map-colored.html')
+    return render_template('globe.html')
 
 @app.route('/realtime', methods=['GET'])
 
