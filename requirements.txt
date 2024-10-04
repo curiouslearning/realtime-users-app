@@ -5,3 +5,4 @@ google-auth
 google-analytics-data
 google-cloud-secret-manager==2.16.2
 geopy==2.3.0
+flask_caching

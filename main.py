@@ -7,10 +7,18 @@ from time import sleep
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import time
 from google.api_core.exceptions import ResourceExhausted
-from geopy.geocoders import OpenCage
+from flask_caching import Cache
+import requests
 
-
+# Initialize Flask app
 app = Flask(__name__)
+
+# Set up caching (in this case, we're using simple in-memory caching)
+app.config['CACHE_TYPE'] = 'SimpleCache'
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache timeout in seconds (5 minutes)
+
+cache = Cache(app)
+
 
 def get_gcp_credentials():
     client = secretmanager.SecretManagerServiceClient()
@@ -32,16 +40,25 @@ def get_coordinates(city, country):
     """
     Fetch latitude and longitude using the Google Geocoding API.
     """
-    api_key = "fc14231c09b94f1494d254d6ad3efacf"  # Replace with your actual API key
-    geolocator =  OpenCage(api_key)
+    api_key = "AIzaSyDeBC6RCnaUPoi2ch_dXrOln03mW9FWw5E"  
+    url = f"https://maps.googleapis.com/maps/api/geocode/json"
+    params = {
+        'address': f"{city}, {country}",
+        'key': api_key
+    }
+    
     try:
-        location = geolocator.geocode(f"{city}, {country}", timeout=10)
-        if location:
-            return location.latitude, location.longitude
-    except GeocoderTimedOut:
-        print(f"Geocoding timed out for {city}, {country}")
-    except GeocoderServiceError as e:
-        print(f"Geocoding error: {str(e)}")
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if data['status'] == 'OK':
+            location = data['results'][0]['geometry']['location']
+            return location['lat'], location['lng']
+        else:
+            print(f"Geocoding failed for {city}, {country}: {data['status']}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error during Google Geocoding API request: {str(e)}")
     
     return None, None
 
@@ -70,7 +87,9 @@ def map_colored():
     return render_template('map-colored.html')
 
 
+# Assuming `cache` is already set up as shown earlier
 @app.route('/realtime', methods=['GET'])
+@cache.cached(timeout=120)  # Cache the API data for 5 minutes
 def get_realtime_data():
     retries = 3
     while retries > 0:
@@ -89,7 +108,19 @@ def get_realtime_data():
                 country = row.dimension_values[0].value
                 city = row.dimension_values[1].value
                 active_users = row.metric_values[0].value
-                lat, lon = get_coordinates(city, country)
+
+                # Check if the coordinates are already cached
+                cache_key = f"{city},{country}"
+                cached_coords = cache.get(cache_key)
+
+                if cached_coords:
+                    lat, lon = cached_coords
+                else:
+                    lat, lon = get_coordinates(city, country)
+                    if lat and lon:
+                        # Store the coordinates in the cache for future use
+                        cache.set(cache_key, (lat, lon))
+
                 response_data.append({
                     'country': country,
                     'city': city,
