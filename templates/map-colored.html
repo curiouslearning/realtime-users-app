@@ -140,15 +140,23 @@
                         const activeUsers = country.active_users;
 
                         if (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)) {
-                            const circleRadius = Math.max(10000, activeUsers * 500);
+
+                            const circleRadius = Math.max(1000, activeUsers * 1000);
+
                             const circle = L.circle([lat, lng], {
                                 radius: circleRadius,
-                                color: 'red',
+                                color: 'blue',
                                 fillOpacity: 0.5,
                             }).addTo(map);
 
-                            const circleSize = Math.max(20, activeUsers * 10);
 
+                            // Adjust circle size calculations based on activeUsers
+                            let circleSize;
+                            if (activeUsers <= 3) {
+                                circleSize = 15; // Minimum size when active users are less than 5
+                            } else {
+                                circleSize = Math.min(50, activeUsers * 5); // Proportional scaling capped at 100px
+                            }
                             const icon = L.divIcon({
                                 html: `<div class="pulse-circle" style="width: ${circleSize}px; height: ${circleSize}px;"></div>`,
                                 iconSize: [circleSize, circleSize],
