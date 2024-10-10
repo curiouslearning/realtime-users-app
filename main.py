@@ -68,7 +68,7 @@ def index():
     """
     Serve the HTML globe page.
     """
-    return render_template('split_view.html')
+    return render_template('world_map.html')
 
 
 @app.route('/globe')
@@ -79,12 +79,12 @@ def split_view():
     return render_template('globe.html')
 
 
-@app.route('/map-colored')
+@app.route('/world_map')
 def map_colored():
     """
-    Serve the map_colored.html page.
+    Serve the world_map.html page.
     """
-    return render_template('map-colored.html')
+    return render_template('world_map.html')
 
 
 # Assuming `cache` is already set up as shown earlier

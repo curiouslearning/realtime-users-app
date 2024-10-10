@@ -12,12 +12,18 @@
             top: 25%;
         }
 
+        .ocean-overlay {
+            background-color: rgba(0, 128, 255, 0.5); /* Example of a semi-transparent blue */
+            pointer-events: none;
+}
+
+
         .pulse-circle {
             width: 10px;
             /* Default size */
             height: 10px;
             /* Default size */
-            background-color: rgba(255, 0, 0, 0.4);
+            background-color: #a40045;
             border-radius: 50%;
             animation: pulsate 1.5s ease-out infinite;
             opacity: 1;
@@ -59,10 +65,14 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script> <!-- Load chroma.js for gradient color scale -->
     <script>
-        const map = L.map('map').setView([20, 15], 2.1); // Initialize map
+        const map = L.map('map').setView([20, 15], 2.4); // Initialize map
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); // Add OpenStreetMap tile layer
-
+        L.rectangle([[90, -180], [-90, 180]], {
+            color: "#ffffff",       // Optional: if you want a white border, or you can omit this
+            fillColor: "#ffffff",   // White fill for the ocean
+            fillOpacity: 1          // Fully opaque white
+        }).addTo(map);
         // Load the GeoJSON data for countries
         fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
             .then(function (response) {
@@ -71,8 +81,7 @@
             .then(function (data) {
                 const numberOfCountries = data.features.length;
 
-                // Create a gradient color scale using chroma.js (from blue to red)
-                const colorScale = chroma.scale(['#384e1d', '#c4bd8b', '#81b14f', '#451b04', '#bec991']).mode('lch').colors(numberOfCountries);               // Assign a color to each country based on its position in the GeoJSON
+                const colorScale = chroma.scale(['#FDFD96']).mode('lch').colors(numberOfCountries);               // Assign a color to each country based on its position in the GeoJSON
                 function style(feature) {
                     // Assign a color based on the feature's index in the features array
                     const countryIndex = data.features.findIndex(f => f.properties.ADMIN === feature.properties.ADMIN);
@@ -80,8 +89,8 @@
                         fillColor: colorScale[countryIndex],  // Color from the gradient palette
                         weight: 1,
                         opacity: 1,
-                        color: 'white',  // Border color
-                        dashArray: '3',
+                        color: '#2e2305',  // Border color
+                   //     dashArray: '3',
                         fillOpacity: 0.7
                     };
                 }
@@ -145,7 +154,7 @@
 
                             const circle = L.circle([lat, lng], {
                                 radius: circleRadius,
-                                color: 'blue',
+                                color: '#a40045',
                                 fillOpacity: 0.5,
                             }).addTo(map);
 
