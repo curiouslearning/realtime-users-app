@@ -87,9 +87,8 @@ def map_colored():
     return render_template('world_map.html')
 
 
-# Assuming `cache` is already set up as shown earlier
 @app.route('/realtime', methods=['GET'])
-@cache.cached(timeout=120)  # Cache the API data for 5 minutes
+@cache.cached(timeout=300)  # Cache the API data for 5 minutes
 def get_realtime_data():
     retries = 3
     while retries > 0:
@@ -100,8 +99,15 @@ def get_realtime_data():
             request = {
                 "property": f"properties/{property_id}",
                 "dimensions": [{"name": "country"}, {"name": "city"}],
-                "metrics": [{"name": "activeUsers"}]
+                "metrics": [{"name": "activeUsers"}],
+                "minute_ranges": [
+                    {
+                        "start_minutes_ago": 29,
+                        "end_minutes_ago": 0
+                    }
+                ]
             }
+            print ("Calling geocoding API")
             response = client.run_realtime_report(request=request)
             response_data = []
             for row in response.rows:
