@@ -10,6 +10,8 @@
         #map {
             height: 100vh;
             top: 25%;
+            background-color: white;
+
         }
 
         .ocean-overlay {
@@ -65,9 +67,21 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script> <!-- Load chroma.js for gradient color scale -->
     <script>
-        const map = L.map('map').setView([20, 15], 2.4); // Initialize map
+    const map = L.map('map', {
+        worldCopyJump: false,
+        maxBounds: [
+            [-85, -180],  // South-West corner (close to the poles, but avoid excessive map wrap)
+            [85, 180]     // North-East corner
+        ],
+        maxBoundsViscosity: 1.0  // Ensures the map can't be panned beyond bounds
+    }).setView([20, 15], 2.4); // Initial center and zoom
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                noWrap: true, // Prevents map repetition
+                maxZoom: 19,
+                minZoom: 2  // Adjust to prevent zooming too far out
+            }).addTo(map);
+
         L.rectangle([[90, -180], [-90, 180]], {
             color: "#ffffff",       // Optional: if you want a white border, or you can omit this
             fillColor: "#ffffff",   // White fill for the ocean
@@ -100,6 +114,25 @@
                     style: style
                 }).addTo(map);
             });
+
+function adjustZoom() {
+    const width = window.innerWidth;
+    let zoomLevel = 2.4; // Default zoom level
+
+    if (width < 768) {
+        zoomLevel = 2;  // For small screens
+    } else if (width >= 768 && width < 1200) {
+        zoomLevel = 2.2;  // For medium screens
+    } else if (width >= 1200) {
+        zoomLevel = 2.4;  // For large screens
+    }
+
+    map.setView([20, 15], zoomLevel);
+}
+
+    window.addEventListener('resize', adjustZoom);
+    adjustZoom();  // Initial adjustment
+
 
         // Function to aggregate data by country
  function aggregateByCountry(data) {
