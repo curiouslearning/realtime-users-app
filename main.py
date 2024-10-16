@@ -95,7 +95,7 @@ def get_realtime_data():
         try:
             credentials = get_gcp_credentials()
             client = BetaAnalyticsDataClient(credentials=credentials)
-            property_id = "175820453"
+            property_id = "159643920"
             request = {
                 "property": f"properties/{property_id}",
                 "dimensions": [{"name": "country"}, {"name": "city"}],
