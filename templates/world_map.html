@@ -194,10 +194,10 @@ function adjustZoom() {
 
                             // Adjust circle size calculations based on activeUsers
                             let circleSize;
-                            if (activeUsers <= 3) {
-                                circleSize = 15; // Minimum size when active users are less than 5
+                            if (activeUsers <= 2) {
+                                circleSize = 5; // Minimum size when active users are less than 3
                             } else {
-                                circleSize = Math.min(50, activeUsers * 5); // Proportional scaling capped at 100px
+                                circleSize = Math.min(50, activeUsers * 5); // Proportional scaling capped at 50px
                             }
                             const icon = L.divIcon({
                                 html: `<div class="pulse-circle" style="width: ${circleSize}px; height: ${circleSize}px;"></div>`,
