@@ -7,24 +7,42 @@
     <title>Real-Time User Map with Gradient Countries</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
         #map {
             height: 100vh;
-            top: 25%;
             background-color: white;
+            top: 25%;
+        }
 
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
         }
 
         .ocean-overlay {
-            background-color: rgba(0, 128, 255, 0.5); /* Example of a semi-transparent blue */
+            background-color: rgba(0, 128, 255, 0.5);
             pointer-events: none;
-}
-
+        }
 
         .pulse-circle {
             width: 10px;
-            /* Default size */
             height: 10px;
-            /* Default size */
             background-color: #a40045;
             border-radius: 50%;
             animation: pulsate 1.5s ease-out infinite;
@@ -33,7 +51,6 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            /* Center the circle in the div */
         }
 
         .transparent-div {
@@ -49,7 +66,6 @@
 
             50% {
                 transform: translate(-50%, -50%) scale(1.5);
-                /* Pulsing effect */
                 opacity: 0.3;
             }
 
@@ -62,143 +78,134 @@
 </head>
 
 <body>
+    <div class="loading-overlay" id="loadingOverlay">
+        Loading realtime map...
+    </div>
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script> <!-- Load chroma.js for gradient color scale -->
+    <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"></script>
     <script>
-    const map = L.map('map', {
-        worldCopyJump: false,
-        maxBounds: [
-            [-85, -180],  // South-West corner (close to the poles, but avoid excessive map wrap)
-            [85, 180]     // North-East corner
-        ],
-        maxBoundsViscosity: 1.0  // Ensures the map can't be panned beyond bounds
-    }).setView([20, 15], 2.4); // Initial center and zoom
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                noWrap: true, // Prevents map repetition
-                maxZoom: 19,
-                minZoom: 2  // Adjust to prevent zooming too far out
-            }).addTo(map);
+        const map = L.map('map', {
+            worldCopyJump: false,
+            maxBounds: [
+                [-85, -180],  // South-West corner
+                [85, 180]     // North-East corner
+            ],
+            maxBoundsViscosity: 1.0
+        }).setView([20, 15], 2.4);
+
+        // Show loading overlay on zoom start and hide it on zoom end
+        map.on('zoomstart', function () {
+            loadingOverlay.classList.remove('hidden');
+        });
+        map.on('zoomend', function () {
+            loadingOverlay.classList.add('hidden');
+        });
+
+        // Load tiles and hide loading overlay once the map is fully loaded
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            noWrap: true,
+            maxZoom: 19,
+            minZoom: 2
+        }).on('load', function () {
+            loadingOverlay.classList.add('hidden');
+        }).addTo(map);
 
         L.rectangle([[90, -180], [-90, 180]], {
-            color: "#ffffff",       // Optional: if you want a white border, or you can omit this
-            fillColor: "#ffffff",   // White fill for the ocean
-            fillOpacity: 1          // Fully opaque white
+            color: "#ffffff",
+            fillColor: "#ffffff",
+            fillOpacity: 1
         }).addTo(map);
-        // Load the GeoJSON data for countries
-        fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (data) {
-                const numberOfCountries = data.features.length;
 
-                const colorScale = chroma.scale(['#FDFD96']).mode('lch').colors(numberOfCountries);               // Assign a color to each country based on its position in the GeoJSON
+        fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+            .then(response => response.json())
+            .then(data => {
+                const numberOfCountries = data.features.length;
+                const colorScale = chroma.scale(['#FDFD96']).mode('lch').colors(numberOfCountries);
+
                 function style(feature) {
-                    // Assign a color based on the feature's index in the features array
                     const countryIndex = data.features.findIndex(f => f.properties.ADMIN === feature.properties.ADMIN);
                     return {
-                        fillColor: colorScale[countryIndex],  // Color from the gradient palette
+                        fillColor: colorScale[countryIndex],
                         weight: 1,
                         opacity: 1,
-                        color: '#9E9E9E',  // Border color
-                   //     dashArray: '3',
+                        color: '#9E9E9E',
                         fillOpacity: 0.7
                     };
                 }
 
-                // Add the countries layer to the map with styling
-                L.geoJson(data, {
-                    style: style
-                }).addTo(map);
+                L.geoJson(data, { style: style }).addTo(map);
             });
 
-function adjustZoom() {
-    const width = window.innerWidth;
-    let zoomLevel = 2.4; // Default zoom level
+        function adjustZoom() {
+            const width = window.innerWidth;
+            let zoomLevel = 2.4;
 
-    if (width < 768) {
-        zoomLevel = 2;  // For small screens
-    } else if (width >= 768 && width < 1200) {
-        zoomLevel = 2.2;  // For medium screens
-    } else if (width >= 1200) {
-        zoomLevel = 2.4;  // For large screens
-    }
-
-    map.setView([20, 15], zoomLevel);
-}
-
-    window.addEventListener('resize', adjustZoom);
-    adjustZoom();  // Initial adjustment
-
-
-        // Function to aggregate data by country
- function aggregateByCountry(data) {
-        const countryData = {};
-
-        data.forEach(user => {
-            if (user.country && user.latitude && user.longitude && !isNaN(parseInt(user.active_users))) {
-                const country = user.country;
-                const activeUsers = parseInt(user.active_users);
-
-                // Aggregate by country
-                if (!countryData[country]) {
-                    countryData[country] = {
-                        country: country,  // Make sure to include the country name here
-                        active_users: activeUsers,
-                        latitude: user.latitude,
-                        longitude: user.longitude,
-                    };
-                } else {
-                    countryData[country].active_users += activeUsers;
-                }
+            if (width < 768) {
+                zoomLevel = 2;
+            } else if (width >= 768 && width < 1200) {
+                zoomLevel = 2.2;
+            } else if (width >= 1200) {
+                zoomLevel = 2.4;
             }
-        });
 
-        return Object.values(countryData);
-    }
+            map.setView([20, 15], zoomLevel);
+        }
 
-        // Function to fetch real-time data
+        window.addEventListener('resize', adjustZoom);
+        adjustZoom();
+
+        function aggregateByCountry(data) {
+            const countryData = {};
+            data.forEach(user => {
+                if (user.country && user.latitude && user.longitude && !isNaN(parseInt(user.active_users))) {
+                    const country = user.country;
+                    const activeUsers = parseInt(user.active_users);
+
+                    if (!countryData[country]) {
+                        countryData[country] = {
+                            country: country,
+                            active_users: activeUsers,
+                            latitude: user.latitude,
+                            longitude: user.longitude,
+                        };
+                    } else {
+                        countryData[country].active_users += activeUsers;
+                    }
+                }
+            });
+
+            return Object.values(countryData);
+        }
+
         function fetchRealtimeData() {
             fetch('/realtime')
                 .then(response => response.json())
                 .then(data => {
-                    // Clear existing markers
-                    map.eachLayer(function (layer) {
+                    map.eachLayer(layer => {
                         if (layer instanceof L.Circle || layer instanceof L.Marker) {
                             map.removeLayer(layer);
                         }
                     });
 
-                    // Aggregate data by country
                     const aggregatedData = aggregateByCountry(data);
-
-                    // Add new markers and circles based on country
                     aggregatedData.forEach(country => {
                         const lat = country.latitude;
                         const lng = country.longitude;
                         const activeUsers = country.active_users;
 
                         if (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)) {
-
                             const circleRadius = Math.max(1000, activeUsers * 1000);
-
                             const circle = L.circle([lat, lng], {
                                 radius: circleRadius,
                                 color: '#a40045',
                                 fillOpacity: 0.5,
                             }).addTo(map);
 
-
-                            // Adjust circle size calculations based on activeUsers
-                            let circleSize;
-                            if (activeUsers <= 2) {
-                                circleSize = 5; // Minimum size when active users are less than 3
-                            } else {
-                                circleSize = Math.min(50, activeUsers * 5); // Proportional scaling capped at 50px
-                            }
+                            let circleSize = activeUsers <= 2 ? 5 : Math.min(50, activeUsers * 5);
                             const icon = L.divIcon({
                                 html: `<div class="pulse-circle" style="width: ${circleSize}px; height: ${circleSize}px;"></div>`,
                                 iconSize: [circleSize, circleSize],
@@ -207,26 +214,19 @@ function adjustZoom() {
                             });
 
                             const marker = L.marker([lat, lng], { icon }).addTo(map);
-
-                            // Bind popup for circle (on click)
                             circle.bindPopup(`Country: ${country.country}<br>Active Users: ${activeUsers}`);
-
-                            // Bind tooltip for marker (on hover)
                             marker.bindTooltip(`Country: ${country.country}<br>Active Users: ${activeUsers}`, {
                                 permanent: false,
                                 direction: 'top',
                                 offset: L.point(0, -circleSize / 2)
                             });
                         }
-                    });  
-
-                });  
+                    });
+                });
         }
 
-        // Fetch data every 60 seconds
         setInterval(fetchRealtimeData, 60000);
-        fetchRealtimeData();  // Initial fetch when the page loads
-
+        fetchRealtimeData();
     </script>
 </body>
 
