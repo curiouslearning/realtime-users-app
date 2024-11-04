@@ -536,6 +536,15 @@
       "latitude" : 8,
       "longitude" : 38
     },
+
+    {
+      "country": "Eswatini",
+      "alpha2": "SZ",
+      "alpha3": "SWZ",
+      "numeric": 748,
+      "latitude": -26.5225,
+      "longitude": 31.4659
+    },
 {
       "country" : "Falkland Islands (Malvinas)",
       "alpha2" : "FK",
