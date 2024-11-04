@@ -48,6 +48,7 @@ def get_coordinates(city, country):
     }
     
     try:
+        print(f" Calling Geocoding API for {city}, {country}")
         response = requests.get(url, params=params)
         response.raise_for_status()
         data = response.json()
