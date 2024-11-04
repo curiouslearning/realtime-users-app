@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 # Set up caching (in this case, we're using simple in-memory caching)
 app.config['CACHE_TYPE'] = 'SimpleCache'
-app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache timeout in seconds (5 minutes)
+app.config['CACHE_DEFAULT_TIMEOUT'] = 86400  # Cache timeout in seconds (5 minutes)
 
 cache = Cache(app)
 
@@ -89,7 +89,7 @@ def map_colored():
 
 
 @app.route('/realtime', methods=['GET'])
-@cache.cached(timeout=300)  # Cache the API data for 5 minutes
+@cache.cached(timeout=86400)  # Cache the API data for 5 minutes
 def get_realtime_data():
     retries = 3
     while retries > 0:
